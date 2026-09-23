@@ -77,11 +77,14 @@ Jev is **not a slow autoregressive LLM**. It is a System One model engineered sp
 - **`score`**: Ranks candidate elements (0–4) for complex multi-criteria relevance.
 - **Parallel Batching**: Can evaluate 5–10 conditions in a single sub-100ms API call.
 
+> **💡 What Jev AI Is (and Is Not):**
+> Jev AI operates strictly on text and structured DOM metadata (`tag`, `id`, `class`, `aria-label`, visible text). **Jev AI does NOT have computer vision and cannot see or process images.** It does not generate freeform conversational text. Its superpower is sub-100ms structured decision-making over structured input.
+
 ### 2. OpenAI-Compatible LLM Engine — 5% Fallback
 The LLM only activates when genuinely required:
 - Creative text generation for open-ended form fields
-- Optical character recognition (OCR) and vision analysis for image CAPTCHAs
 - Page summarization and structured data extraction (`aiSummarize`, `aiExtract`)
+- Visual reasoning over screenshots when a vision model (e.g. GPT-4o) is configured
 - Ambiguous edge-cases where Jev confidence is below threshold
 
 ---
@@ -94,7 +97,7 @@ The LLM only activates when genuinely required:
 - 📊 **Intelligent Page Summarization (`aiSummarize` & `aiExtract`):** Extract executive statistics, financial tables, and JSON schemas directly from live pages.
 - 📍 **Element Coordinates & Points (`aiFindElement`):** Retrieve bounding boxes and center points `{ x, y, width, height, centerX, centerY }` for vision models or custom click drivers.
 - 🤖 **Agent Orchestrator Ready:** Export standard OpenAI Function Calling / LangChain tool definitions (`getToolDefinitions()`, `executeAction()`).
-- 🔐 **Autonomous CAPTCHA Handling:** Integrated detection and solving for reCAPTCHA v2 checkbox, image challenges, sliders, and distorted text.
+- 🧑‍💻 **Human-in-the-Loop:** Seamless `onPrompt` hook to pause and ask users for 2FA, OTPs, or verification inputs during automation.
 - 🪶 **Ultra-Lightweight & Multi-Engine:** Supports Chromium, Firefox, WebKit, and native system browsers (Chrome, Edge). Blocks images, fonts, media, and trackers for minimum RAM usage.
 - 🌐 **Zero-Dependency Native HTTP Client:** Works out-of-the-box via native `fetch`—no external `openai` SDK required. Compatible with Ollama, vLLM, DeepSeek, Groq, OpenRouter, and Azure.
 
@@ -259,7 +262,7 @@ const browser = new JevBrow({
     model: 'gpt-4o-mini', // Default: 'gpt-4o-mini' or 'gpt-5-nano'
     baseUrl: 'https://openrouter.ai/api/v1', // Any custom endpoint
     useHttp: true, // Force native fetch, zero OpenAI SDK required
-    isVisionCapable: true, // Enable for image CAPTCHA solving
+    isVisionCapable: true, // Enable if using multimodal vision models
   },
 
   // Browser Engine & Optimization
@@ -322,23 +325,19 @@ const browser = new JevBrow({
 
 ---
 
-## 🔒 Autonomous CAPTCHA Resolution
+## 🧑‍💻 Human-in-the-Loop & Interactive 2FA / OTP
 
-JevBrow includes automated detection and solving pipelines:
-
-| CAPTCHA Type | Detection Engine | Solving Strategy |
-|---|---|---|
-| **reCAPTCHA v2 Checkbox** | Jev AI | Human-like Bezier cursor movement & click |
-| **Image Grid Selection** | Jev AI | Screenshot segmentation + Vision LLM classification |
-| **Distorted Text** | Jev AI | High-resolution crop + OCR Vision LLM |
-| **Slider Puzzle** | Jev AI | Visual offset calculation + drag-and-drop physics |
+Automation shouldn't pretend to magically bypass enterprise security or multi-factor authentication. When an automated workflow encounters a 2FA prompt, OTP field, or manual confirmation dialog, JevBrow's `onPrompt` hook pauses automation and requests input from the user or developer:
 
 ```typescript
-// Detect and solve automatically
-const captchaResult = await page.aiSolveCaptcha();
-if (captchaResult.success) {
-  console.log(`Solved ${captchaResult.type} in ${captchaResult.attempts} attempt(s)`);
-}
+const browser = new JevBrow({
+  // Intercept interactive 2FA/OTP or confirmation requests
+  onPrompt: async (request) => {
+    console.log(`\n🔔 Human intervention needed: ${request.message}`);
+    // Read from CLI terminal, SMS gateway, or webhook
+    return await readUserInputFromCli(request.message);
+  },
+});
 ```
 
 ---
@@ -362,7 +361,6 @@ if (captchaResult.success) {
 - `aiExtract<T>(prompt: string)` — Structured JSON data extraction.
 - `aiFindElement(description: string)` — Retrieve element selector and bounding box `{ x, y, width, height, centerX, centerY }`.
 - `aiScreenshot(options?: { fullPage?, base64?, path? })` — Capture screenshot.
-- `aiSolveCaptcha()` — Detect and solve active CAPTCHAs.
 - `getToolDefinitions()` — Standard function-calling tool specifications.
 - `executeAction(action, params)` — Dynamic tool execution handler.
 - `page: Page` — Direct access to the raw Playwright Page instance.

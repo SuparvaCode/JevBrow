@@ -2,7 +2,7 @@
  * Slider CAPTCHA Solver.
  *
  * Handles slider puzzle CAPTCHAs where you drag a piece to complete an image.
- * Uses Jev for position estimation and human-like drag behavior.
+ * Uses bounding box heuristics and optional Vision LLM for position estimation.
  */
 
 import type { Page } from 'playwright';

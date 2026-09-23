@@ -5,7 +5,7 @@
  *   • Jev AI (TypeSafe System One) — sub-100ms structured decision engine
  *   • OpenAI-compatible LLM — generative text, complex reasoning, and vision
  *   • Playwright — high-performance browser engine (Chromium, Firefox, WebKit, Edge)
- *   • Autonomous CAPTCHA handling — detection and solving
+ *   • Human-in-the-loop & smart waiting — pause for 2FA/OTP and evaluate page readiness
  *
  * Quickstart:
  *   const { browser, page } = await JevBrow.open("https://example.com");
@@ -279,10 +279,15 @@ export class JevPage {
     });
   }
 
-  // ─── CAPTCHA ────────────────────────────────────────────────────────────
+  // ─── CAPTCHA (Experimental Heuristics) ───────────────────────────────────
 
   /**
-   * Detect and solve any CAPTCHA on the page.
+   * Experimental: Attempt to detect and solve simple challenges.
+   *
+   * NOTE: Jev AI operates purely on text/DOM metadata and has no vision capability.
+   * Any visual image challenge requires a configured Vision LLM fallback, and modern
+   * enterprise anti-bot solutions (reCAPTCHA Enterprise, Cloudflare) generally block
+   * automated browser sessions. For protected flows, prefer using the `onPrompt` hook.
    */
   async aiSolveCaptcha(): Promise<CaptchaSolveResult> {
     const start = Date.now();
