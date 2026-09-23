@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/jev-brow-banner.png" alt="JevBrow — Natural Language Browser Driver" width="100%" />
+</p>
+
 # JevBrow
 
 <p align="center">
