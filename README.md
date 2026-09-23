@@ -93,6 +93,9 @@ The LLM only activates when genuinely required:
 
 - 🏎️ **Sub-100ms Decision Speed:** Powered by TypeSafe System One Jev primitives.
 - 🎯 **Zero CSS Selector Fragility:** Control the browser purely with natural language intents (`aiClick("sign in button")`, `aiType("email", "user@test.com")`).
+- 🛡️ **Self-Healing Test Assertions (`aiAssert`):** Semantic E2E test assertions with calibrated probabilities that never break across CSS class or UI redesigns.
+- 📋 **Smart Profile Form Auto-Mapper (`aiAutoFillForm`):** Batch-maps and populates entire web forms from arbitrary JSON profiles in a single sub-100ms API call.
+- 🧭 **Autonomous Goal-Seeking Crawler (`aiSeekGoal`):** Traverses unknown websites toward an objective without hardcoded navigation scripts.
 - ⏳ **Smart AI Waiting (`aiWaitFor`):** Polls pages dynamically with Jev probability checks—say goodbye to flaky `sleep(3000)`.
 - 📊 **Intelligent Page Summarization (`aiSummarize` & `aiExtract`):** Extract executive statistics, financial tables, and JSON schemas directly from live pages.
 - 📍 **Element Coordinates & Points (`aiFindElement`):** Retrieve bounding boxes and center points `{ x, y, width, height, centerX, centerY }` for vision models or custom click drivers.
@@ -209,6 +212,57 @@ const metrics = await page.aiExtract<DashboardMetrics>(
 );
 
 console.log('Parsed Metrics:', metrics);
+```
+
+---
+
+### 6. Self-Healing E2E Test Assertions (`aiAssert`)
+
+Stop writing brittle test assertions that break whenever CSS class names or DOM hierarchies change:
+
+```javascript
+// Validates page condition dynamically using sub-100ms Jev probability checks
+// Throws an AssertionError if probability does not reach threshold within timeout
+await page.aiAssert('The checkout completed successfully and an order confirmation is visible');
+await page.aiAssert('No credit card validation errors are displayed');
+```
+
+---
+
+### 7. Smart Profile Form Auto-Mapper (`aiAutoFillForm`)
+
+Pass an arbitrary JSON user profile to automatically match and populate all form fields in a single sub-100ms batched Jev query:
+
+```javascript
+const userProfile = {
+  customerName: 'Marcus Vance',
+  telephone: '+1 (555) 987-6543',
+  deliveryTime: '20:15',
+  comments: 'Please leave package near the front porch door.',
+};
+
+// Maps inputs, textareas, and selects in 1 batch Jev call and populates them
+const result = await page.aiAutoFillForm(userProfile, { submitAfter: true });
+
+console.log(`Auto-filled ${result.filledFields.length} inputs!`);
+console.log('Unmapped profile keys:', result.unmappedKeys);
+```
+
+---
+
+### 8. Autonomous Goal-Seeking Navigation (`aiSeekGoal`)
+
+Instruct the browser to autonomously discover and navigate to deep pages across unknown websites without hardcoded selectors:
+
+```javascript
+const result = await page.aiSeekGoal({
+  goal: 'Find the developer API documentation or pricing guide',
+  maxSteps: 4,
+  onStep: (step) => console.log(`Step ${step.stepNumber}: ${step.action} -> ${step.url}`),
+});
+
+console.log('Reached goal:', result.success);
+console.log('Path traversed:', result.path);
 ```
 
 ---
@@ -355,6 +409,9 @@ const browser = new JevBrow({
 - `aiClick(description: string)` — Click an element using natural language intent.
 - `aiType(description: string, text: string)` — Type into matching field.
 - `aiLogin(credentials: { username?, password, submitText? })` — One-liner login helper.
+- `aiAssert(assertion: string, options?: AiAssertOptions)` — Resilient semantic assertion; throws `AssertionError` if condition fails.
+- `aiAutoFillForm(profile, options?: AutoFillOptions)` — Single-batch automatic form field mapping & population.
+- `aiSeekGoal(options: SeekGoalOptions | string)` — Multi-step autonomous goal-seeking navigation crawler.
 - `aiWaitFor(condition: string, options?)` — Polls with Jev AI until condition is met.
 - `aiAsk(question: string)` — Query page state with calibrated probability ($0.0 - 1.0$).
 - `aiSummarize(prompt?: string)` — Intelligent markdown summary of page content via LLM.
@@ -364,6 +421,9 @@ const browser = new JevBrow({
 - `getToolDefinitions()` — Standard function-calling tool specifications.
 - `executeAction(action, params)` — Dynamic tool execution handler.
 - `page: Page` — Direct access to the raw Playwright Page instance.
+
+### `AssertionError`
+- Error thrown by `page.aiAssert(...)` with `{ assertion, probability, threshold, url }`.
 
 ---
 

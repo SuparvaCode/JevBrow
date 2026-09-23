@@ -78,6 +78,9 @@ export class Logger {
     else if (step.type === 'type') icon = '⌨️ ';
     else if (step.type === 'ask') icon = '🧠';
     else if (step.type === 'ready_check') icon = '⏳';
+    else if (step.type === 'assert') icon = step.success ? '✅' : '❌';
+    else if (step.type === 'seek_goal') icon = '🧭';
+    else if (step.type === 'autofill') icon = '📋';
     else if (step.type === 'captcha_detect' || step.type === 'captcha_solve') icon = '🔓';
     else if (step.type === 'llm_escalation') icon = '🤖';
 

@@ -25,6 +25,11 @@ import type {
   ElementInfo,
   BoundingBox,
   PromptRequest,
+  AiAssertOptions,
+  SeekGoalOptions,
+  SeekGoalResult,
+  AutoFillOptions,
+  AutoFillResult,
 } from './utils/types.js';
 import { resolveConfig, type ResolvedConfig } from './config.js';
 import { DecisionRouter } from './ai/decision-router.js';
@@ -34,6 +39,28 @@ import { ActionExecutor } from './browser/action-executor.js';
 import { CaptchaSolver } from './captcha/captcha-solver.js';
 import { Logger } from './utils/logger.js';
 import { sleep } from './utils/retry.js';
+
+/**
+ * Error thrown when a semantic AI assertion fails.
+ */
+export class AssertionError extends Error {
+  readonly probability: number;
+  readonly threshold: number;
+  readonly assertion: string;
+  readonly url: string;
+
+  constructor(
+    message: string,
+    details: { assertion: string; probability: number; threshold: number; url: string },
+  ) {
+    super(message);
+    this.name = 'AssertionError';
+    this.assertion = details.assertion;
+    this.probability = details.probability;
+    this.threshold = details.threshold;
+    this.url = details.url;
+  }
+}
 
 /**
  * AI-enhanced page wrapper providing natural-language browser interactions.
@@ -471,6 +498,293 @@ export class JevPage {
     // Final evaluation if timed out
     const finalState = await this.analyzer.getPageState(this.page);
     return this.router.askBoolean(condition, finalState);
+  }
+
+  // ─── Self-Healing Assertions (Idea 2) ───────────────────────────────────
+
+  /**
+   * Resilient E2E test assertion powered by Jev AI System One.
+   *
+   * Polls the page state until the assertion passes with high confidence,
+   * or throws an `AssertionError` if the condition is not met within timeout.
+   * Eliminates brittle CSS selector maintenance across UI redesigns.
+   *
+   * @param assertion  Natural language assertion (e.g. "The items were saved to the cart")
+   * @param options    Timeout and minimum confidence configuration
+   * @throws {AssertionError} If the assertion does not reach minConfidence within timeout
+   *
+   * @example
+   * await page.aiAssert('The checkout completed successfully and an order number is visible');
+   * await page.aiAssert('No credit card validation errors are displayed');
+   */
+  async aiAssert(
+    assertion: string,
+    options: AiAssertOptions = {},
+  ): Promise<BooleanDecision> {
+    const timeout = options.timeoutMs ?? 5_000;
+    const minConfidence = options.minConfidence ?? 0.65;
+    const start = Date.now();
+
+    let lastDecision: BooleanDecision | null = null;
+
+    while (Date.now() - start < timeout) {
+      const state = await this.analyzer.getPageState(this.page);
+      lastDecision = await this.router.askBoolean(assertion, state);
+
+      if (lastDecision.result && lastDecision.probability >= minConfidence) {
+        this.log.step({
+          type: 'assert',
+          message: `ASSERT PASSED: "${assertion}" (${(lastDecision.probability * 100).toFixed(1)}%)`,
+          target: assertion,
+          probability: lastDecision.probability,
+          source: lastDecision.source,
+          url: this.page.url(),
+          durationMs: Date.now() - start,
+          success: true,
+        });
+        return lastDecision;
+      }
+
+      await sleep(350);
+    }
+
+    // Final check
+    const finalState = await this.analyzer.getPageState(this.page);
+    lastDecision = await this.router.askBoolean(assertion, finalState);
+
+    const passed = lastDecision.result && lastDecision.probability >= minConfidence;
+
+    this.log.step({
+      type: 'assert',
+      message: `${passed ? 'ASSERT PASSED' : 'ASSERT FAILED'}: "${assertion}" (${(lastDecision.probability * 100).toFixed(1)}%)`,
+      target: assertion,
+      probability: lastDecision.probability,
+      source: lastDecision.source,
+      url: this.page.url(),
+      durationMs: Date.now() - start,
+      success: passed,
+    });
+
+    if (!passed) {
+      throw new AssertionError(
+        `Assertion failed: "${assertion}" (probability: ${lastDecision.probability.toFixed(3)}, required: ${minConfidence}) on ${this.page.url()}`,
+        {
+          assertion,
+          probability: lastDecision.probability,
+          threshold: minConfidence,
+          url: this.page.url(),
+        },
+      );
+    }
+
+    return lastDecision;
+  }
+
+  // ─── Autonomous Goal-Seeking Navigation (Idea 2) ────────────────────────
+
+  /**
+   * Autonomous goal-seeking crawler.
+   *
+   * Traverses links and menus toward an abstract objective using sub-100ms
+   * Jev System One probability checks. Does not require hardcoded click selectors.
+   *
+   * @param options  Goal description, maxSteps, and step callback
+   *
+   * @example
+   * const result = await page.aiSeekGoal('Find the developer API documentation');
+   * console.log(result.success, result.path);
+   */
+  async aiSeekGoal(
+    options: SeekGoalOptions | string,
+  ): Promise<SeekGoalResult> {
+    const opts: SeekGoalOptions = typeof options === 'string' ? { goal: options } : options;
+    const goal = opts.goal;
+    const maxSteps = opts.maxSteps ?? 5;
+    const path: string[] = [this.page.url()];
+    const start = Date.now();
+
+    this.log.info(`Starting autonomous goal search: "${goal}" (max ${maxSteps} steps)`);
+
+    for (let step = 1; step <= maxSteps; step++) {
+      const state = await this.analyzer.getPageState(this.page);
+
+      // 1. Check if current page already satisfies the goal
+      const goalCheck = await this.router.evaluateGoalReached(goal, state);
+      if (goalCheck.result && goalCheck.probability >= 0.7) {
+        this.log.step({
+          type: 'seek_goal',
+          message: `Goal reached at ${this.page.url()} (${(goalCheck.probability * 100).toFixed(1)}%)`,
+          target: goal,
+          probability: goalCheck.probability,
+          durationMs: Date.now() - start,
+          success: true,
+        });
+
+        return {
+          success: true,
+          confidence: goalCheck.probability,
+          stepsTaken: step - 1,
+          path,
+          finalUrl: this.page.url(),
+        };
+      }
+
+      // 2. Select next navigation hop
+      const nextNav = await this.router.chooseGoalNavigation(state.elements, goal, state);
+      if (!nextNav) {
+        this.log.debug(`No further promising links found for goal: "${goal}"`);
+        break;
+      }
+
+      const linkText = nextNav.element.text || nextNav.element.ariaLabel || nextNav.element.tag;
+      this.log.info(`[Step ${step}/${maxSteps}] Navigating via: "${linkText}" (confidence: ${nextNav.confidence.toFixed(2)})`);
+
+      if (opts.onStep) {
+        opts.onStep({
+          stepNumber: step,
+          url: this.page.url(),
+          action: `Click "${linkText}"`,
+          confidence: nextNav.confidence,
+        });
+      }
+
+      // 3. Click the chosen link
+      await this.executor.click(this.page, nextNav.element.selector);
+      await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+      await sleep(1000);
+
+      const currentUrl = this.page.url();
+      if (path[path.length - 1] !== currentUrl) {
+        path.push(currentUrl);
+      }
+    }
+
+    // Final evaluation after all steps
+    const finalState = await this.analyzer.getPageState(this.page);
+    const finalGoalCheck = await this.router.evaluateGoalReached(goal, finalState);
+    const success = finalGoalCheck.result && finalGoalCheck.probability >= 0.65;
+
+    this.log.step({
+      type: 'seek_goal',
+      message: `Goal search finished: ${success ? 'SUCCESS' : 'INCOMPLETE'} (${path.length} URLs)`,
+      target: goal,
+      probability: finalGoalCheck.probability,
+      durationMs: Date.now() - start,
+      success,
+    });
+
+    return {
+      success,
+      confidence: finalGoalCheck.probability,
+      stepsTaken: path.length - 1,
+      path,
+      finalUrl: this.page.url(),
+    };
+  }
+
+  // ─── Smart Profile Form Auto-Mapper (Idea 2) ────────────────────────────
+
+  /**
+   * Automatically match and populate complex web forms from a user data profile.
+   *
+   * Maps all form inputs to user profile keys in a single batched Jev System One call (~100ms),
+   * then types the corresponding values into the inputs.
+   *
+   * @param profile  Key-value map of user data (e.g. { fullName: '...', email: '...', zipCode: '...' })
+   * @param options  Form submission and confidence settings
+   *
+   * @example
+   * await page.aiAutoFillForm({
+   *   fullName: 'Alex Smith',
+   *   email: 'alex@example.com',
+   *   phone: '555-1234',
+   * }, { submitAfter: true });
+   */
+  async aiAutoFillForm(
+    profile: Record<string, string | number | boolean>,
+    options: AutoFillOptions = {},
+  ): Promise<AutoFillResult> {
+    const start = Date.now();
+    const minConfidence = options.minConfidence ?? 0.5;
+    const profileKeys = Object.keys(profile);
+
+    this.log.info(`Auto-filling form with ${profileKeys.length} profile fields`);
+
+    const state = await this.analyzer.getPageState(this.page);
+
+    // Identify editable input elements
+    const formFields = state.elements
+      .filter((el) => {
+        if (el.tag === 'input') {
+          const type = (el.inputType || 'text').toLowerCase();
+          return !['hidden', 'submit', 'button', 'reset', 'checkbox', 'radio'].includes(type);
+        }
+        return el.tag === 'textarea' || el.tag === 'select';
+      })
+      .map((el) => ({
+        index: el.index,
+        info: el,
+      }));
+
+    if (formFields.length === 0) {
+      this.log.warn('No editable form inputs found on this page');
+      return { filledFields: [], unmappedKeys: profileKeys };
+    }
+
+    // Run single batched Jev System One match
+    const matchedMap = await this.router.matchFormFields(formFields, profileKeys);
+
+    const filledFields: AutoFillResult['filledFields'] = [];
+    const usedKeys = new Set<string>();
+
+    for (const field of formFields) {
+      const match = matchedMap[field.index];
+      if (match && match.confidence >= minConfidence && profile[match.key] !== undefined) {
+        const val = profile[match.key];
+        const strVal = String(val);
+
+        try {
+          if (field.info.tag === 'select') {
+            await this.page.selectOption(field.info.selector, { label: strVal }).catch(() =>
+              this.page.selectOption(field.info.selector, strVal),
+            );
+          } else {
+            await this.page.fill(field.info.selector, strVal);
+          }
+
+          filledFields.push({
+            selector: field.info.selector,
+            fieldDescription: `${field.info.tag}[name="${field.info.name || ''}", placeholder="${field.info.placeholder || ''}"]`,
+            profileKey: match.key,
+            value: val,
+            confidence: match.confidence,
+          });
+          usedKeys.add(match.key);
+        } catch (err) {
+          this.log.warn(`Failed to fill form input ${field.info.selector}: ${err}`);
+        }
+      }
+    }
+
+    const unmappedKeys = profileKeys.filter((k) => !usedKeys.has(k));
+
+    if (options.submitAfter) {
+      const submitText = options.submitText || 'submit';
+      this.log.info(`Auto-submitting form with trigger: "${submitText}"`);
+      await this.aiClick(submitText);
+    }
+
+    this.log.step({
+      type: 'autofill',
+      message: `Auto-filled ${filledFields.length}/${formFields.length} inputs (${unmappedKeys.length} unmapped keys)`,
+      durationMs: Date.now() - start,
+      success: filledFields.length > 0,
+    });
+
+    return {
+      filledFields,
+      unmappedKeys,
+    };
   }
 
   // ─── Semantic Element Inspection & Coordinates ──────────────────────────

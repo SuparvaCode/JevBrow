@@ -111,7 +111,10 @@ export interface StepLog {
     | 'ready_check'
     | 'captcha_detect'
     | 'captcha_solve'
-    | 'llm_escalation';
+    | 'llm_escalation'
+    | 'assert'
+    | 'seek_goal'
+    | 'autofill';
   /** Human-readable description of what occurred. */
   message: string;
   /** Target description or intent. */
@@ -275,3 +278,61 @@ export type BrowserAction =
 
 /** Log severity levels. */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
+
+// ─── Idea 2: Next-Gen Automation Types ──────────────────────────────────────
+
+/** Configuration options for self-healing AI assertions. */
+export interface AiAssertOptions {
+  /** Timeout in ms to wait for the condition to pass before failing. Defaults to 5000. */
+  timeoutMs?: number;
+  /** Minimum probability threshold (0.0–1.0) required to consider the assertion passed. Defaults to 0.65. */
+  minConfidence?: number;
+}
+
+/** Configuration options for autonomous goal-seeking navigation. */
+export interface SeekGoalOptions {
+  /** High-level destination or objective (e.g. "Find API pricing table", "Navigate to contact form"). */
+  goal: string;
+  /** Maximum number of autonomous navigation clicks. Defaults to 5. */
+  maxSteps?: number;
+  /** Callback fired on each autonomous step. */
+  onStep?: (step: { stepNumber: number; url: string; action: string; confidence: number }) => void;
+}
+
+/** Result returned by autonomous goal-seeking navigation. */
+export interface SeekGoalResult {
+  /** Whether the goal was successfully achieved on the final page. */
+  success: boolean;
+  /** Calibrated probability that the goal was achieved. */
+  confidence: number;
+  /** Total navigation steps taken. */
+  stepsTaken: number;
+  /** Chronological list of URLs visited during navigation. */
+  path: string[];
+  /** Final page URL reached. */
+  finalUrl: string;
+}
+
+/** Configuration options for smart profile form auto-mapping. */
+export interface AutoFillOptions {
+  /** Automatically click submit after filling all matched fields. Defaults to false. */
+  submitAfter?: boolean;
+  /** Custom button label or natural language description for the submit button. Defaults to 'submit'. */
+  submitText?: string;
+  /** Minimum confidence threshold for matching an input field to a profile key. Defaults to 0.5. */
+  minConfidence?: number;
+}
+
+/** Result returned by smart form auto-mapping. */
+export interface AutoFillResult {
+  /** All form inputs that were successfully matched and populated. */
+  filledFields: Array<{
+    selector: string;
+    fieldDescription: string;
+    profileKey: string;
+    value: string | number | boolean;
+    confidence: number;
+  }>;
+  /** Profile keys that could not be matched to any form input on the page. */
+  unmappedKeys: string[];
+}

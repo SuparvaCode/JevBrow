@@ -124,11 +124,17 @@ export class JevEngine {
     question: string,
     pageState: PageState,
   ): Promise<BooleanDecision> {
+    const inputValues = (pageState.elements || [])
+      .filter((el) => el.value)
+      .map((el) => `${el.tag}${el.name ? `[name="${el.name}"]` : ''}${el.id ? `[id="${el.id}"]` : ''}: "${el.value}"`)
+      .slice(0, 25);
+
     const state = {
       page: {
         url: pageState.url,
         title: pageState.title,
         visible_text: (pageState.visibleText || '').slice(0, 2000),
+        form_inputs: inputValues,
       },
     };
 
@@ -401,7 +407,153 @@ export class JevEngine {
     };
   }
 
-  // ─── Helpers ────────────────────────────────────────────────────────────
+  // ─── Goal Seeking & Form Mapping (Idea 2) ──────────────────────────────
+
+  /**
+   * Check whether the current page state achieves the given high-level goal.
+   */
+  async evaluateGoalReached(
+    goal: string,
+    pageState: PageState,
+  ): Promise<BooleanDecision> {
+    return this.askBoolean(
+      `The current webpage successfully satisfies or displays the goal: "${goal}".`,
+      pageState,
+    );
+  }
+
+  /**
+   * Select the most promising navigation link or button that moves closer to the goal.
+   */
+  async chooseGoalNavigation(
+    elements: ElementInfo[],
+    goal: string,
+    pageState: PageState,
+  ): Promise<ElementDecision | null> {
+    // Filter to navigable candidates (links, buttons, interactive menuitems)
+    const navigable = elements.filter(
+      (el) =>
+        el.tag === 'a' ||
+        el.tag === 'button' ||
+        el.role === 'link' ||
+        el.role === 'button' ||
+        el.role === 'menuitem' ||
+        Boolean(el.href),
+    );
+
+    if (navigable.length === 0) return null;
+
+    const criteria: Record<string, string | null> = {};
+    for (const el of navigable) {
+      criteria[String(el.index)] = this.describeElement(el);
+    }
+    criteria['none'] = 'None of these links or elements lead towards the goal';
+
+    const state = {
+      page: {
+        url: pageState.url,
+        title: pageState.title,
+      },
+      goal,
+      navigable_options: navigable.map((el) => ({
+        index: el.index,
+        description: this.describeElement(el),
+      })),
+    };
+
+    const response = await withRetry(
+      () =>
+        this.client.systemOne({
+          model: this.model,
+          state,
+          questions: {
+            best_link: choice(
+              `Which link, button, or navigation element on this page moves us closest towards achieving the goal: "${goal}"? Choose the element index, or "none" if none are relevant.`,
+              criteria,
+            ),
+          },
+        }),
+      { maxAttempts: 2, logger: this.log },
+    );
+
+    const answer = response.answers.best_link;
+    if (!answer || answer.choice === 'none') {
+      return null;
+    }
+
+    const chosenIndex = parseInt(answer.choice, 10);
+    const chosenElement = navigable.find((el) => el.index === chosenIndex);
+    if (!chosenElement) return null;
+
+    return {
+      element: chosenElement,
+      confidence: answer.confidence,
+      source: 'jev',
+    };
+  }
+
+  /**
+   * Map multiple form inputs to profile keys in a single batched System One API call.
+   */
+  async matchFormFields(
+    formFields: Array<{ index: number; info: ElementInfo }>,
+    profileKeys: string[],
+  ): Promise<Record<number, { key: string; confidence: number }>> {
+    if (formFields.length === 0 || profileKeys.length === 0) {
+      return {};
+    }
+
+    const criteria: Record<string, string | null> = {};
+    for (const key of profileKeys) {
+      criteria[key] = `User profile field: "${key}"`;
+    }
+    criteria['none'] = 'None of the user profile fields belong in this input';
+
+    const questions: Record<string, ReturnType<typeof choice>> = {};
+    for (const field of formFields) {
+      const desc = this.describeElement(field.info);
+      questions[`field_${field.index}`] = choice(
+        `Which user profile data key should be entered into this form input: ${desc}? Choose the matching key, or "none".`,
+        criteria,
+      );
+    }
+
+    const state = {
+      available_profile_keys: profileKeys,
+      form_fields: formFields.map((f) => ({
+        index: f.index,
+        description: this.describeElement(f.info),
+      })),
+    };
+
+    this.log.debug(`Batch-matching ${formFields.length} form fields against ${profileKeys.length} profile keys`);
+
+    const response = await withRetry(
+      () =>
+        this.client.systemOne({
+          model: this.model,
+          state,
+          questions,
+        }),
+      { maxAttempts: 2, logger: this.log },
+    );
+
+    const result: Record<number, { key: string; confidence: number }> = {};
+
+    for (const field of formFields) {
+      const qKey = `field_${field.index}`;
+      const answer = response.answers[qKey];
+      if (answer && answer.choice && answer.choice !== 'none') {
+        result[field.index] = {
+          key: answer.choice,
+          confidence: answer.confidence,
+        };
+      }
+    }
+
+    return result;
+  }
+
 
   /** Create a human-readable description of a DOM element for Jev state. */
   private describeElement(el: ElementInfo): string {

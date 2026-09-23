@@ -225,4 +225,37 @@ export class DecisionRouter {
     }
     return this.llm.chat(prompt);
   }
+
+  // ─── Goal Seeking & Form Mapping (Idea 2) ──────────────────────────────
+
+  /**
+   * Check whether the current page state achieves the given goal.
+   */
+  async evaluateGoalReached(
+    goal: string,
+    pageState: PageState,
+  ): Promise<BooleanDecision> {
+    return this.jev.evaluateGoalReached(goal, pageState);
+  }
+
+  /**
+   * Select the most promising navigation link or button that moves closer to the goal.
+   */
+  async chooseGoalNavigation(
+    elements: ElementInfo[],
+    goal: string,
+    pageState: PageState,
+  ): Promise<ElementDecision | null> {
+    return this.jev.chooseGoalNavigation(elements, goal, pageState);
+  }
+
+  /**
+   * Match form fields against available user profile keys in a single batched call.
+   */
+  async matchFormFields(
+    formFields: Array<{ index: number; info: ElementInfo }>,
+    profileKeys: string[],
+  ): Promise<Record<number, { key: string; confidence: number }>> {
+    return this.jev.matchFormFields(formFields, profileKeys);
+  }
 }

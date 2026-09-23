@@ -5,7 +5,7 @@
  */
 
 // ─── Main classes ─────────────────────────────────────────────────────────────
-export { JevBrow, JevPage } from './jevbrow.js';
+export { JevBrow, JevPage, AssertionError } from './jevbrow.js';
 
 // ─── AI engines ───────────────────────────────────────────────────────────────
 export { JevEngine } from './ai/jev-engine.js';
@@ -46,6 +46,11 @@ export type {
   CaptchaSolveResult,
   BrowserAction,
   LogLevel,
+  AiAssertOptions,
+  SeekGoalOptions,
+  SeekGoalResult,
+  AutoFillOptions,
+  AutoFillResult,
 } from './utils/types.js';
 
 // ─── Utilities ────────────────────────────────────────────────────────────────

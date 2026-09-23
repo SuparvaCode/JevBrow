@@ -1,6 +1,6 @@
 {
   "name": "jevbrow",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Natural language browser driver and automation framework using Jev AI (TypeSafe System One) with OpenAI-compatible LLM fallback. Fast, accurate, lightweight.",
   "type": "module",
   "main": "dist/index.js",
