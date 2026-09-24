@@ -16,7 +16,7 @@ export interface JevConfig {
 export interface LLMConfig {
   /** OpenAI API key. Can be omitted if OPENAI_API_KEY environment variable is set. */
   apiKey?: string;
-  /** Model name, e.g. "gpt-4o-mini", "gpt-5-nano", "o3-mini". Defaults to "gpt-4o-mini". */
+  /** Model name, e.g. "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "deepseek-v4.1-flash". Defaults to "gpt-5.6-luna". */
   model?: string;
   /** Custom base URL for OpenAI-compatible providers (Ollama, vLLM, Azure, OpenRouter, Groq, DeepSeek). */
   baseUrl?: string;

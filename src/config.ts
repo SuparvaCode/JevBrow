@@ -95,7 +95,7 @@ export function resolveConfig(cfg: JevBrowConfig = {}): ResolvedConfig {
   if (llmApiKey) {
     llm = {
       apiKey: llmApiKey,
-      model: cfg.llm?.model ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+      model: cfg.llm?.model ?? process.env.OPENAI_MODEL ?? 'gpt-5.6-luna',
       baseUrl: rawBaseUrl,
       baseURL: rawBaseUrl,
       isVisionCapable:

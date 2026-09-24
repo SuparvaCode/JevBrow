@@ -19,7 +19,7 @@ async function main() {
     llm: process.env.OPENAI_API_KEY
       ? {
           apiKey: process.env.OPENAI_API_KEY,
-          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+          model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
           baseUrl: process.env.OPENAI_BASE_URL || '',
           isVisionCapable: process.env.OPENAI_VISION_CAPABLE === 'true',
         }

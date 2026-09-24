@@ -4,7 +4,7 @@
  * Demonstrates:
  * 1. Running with `useHttp: true` (zero OpenAI SDK required, uses native fetch)
  * 2. Works with custom base URLs (Ollama, vLLM, DeepSeek, OpenRouter, Groq)
- * 3. Works with modern reasoning models (gpt-5-nano, o1, o3-mini) automatically
+ * 3. Works with modern reasoning models (gpt-5.6-luna, gpt-5.6-terra, deepseek-v4.1-flash) automatically
  *
  * Run with:
  *   npx tsx examples/3-http-fallback-and-models.ts
@@ -21,7 +21,7 @@ async function main() {
     // LLM Engine configured with native HTTP fetch
     llm: {
       useHttp: true, // Forces zero-dependency native fetch
-      model: process.env.OPENAI_MODEL || 'gpt-5-nano',
+      model: process.env.OPENAI_MODEL || 'gpt-5.6-luna',
       // baseUrl: 'https://openrouter.ai/api/v1', // Optional: works with any OpenAI-compatible API
     },
     browser: {

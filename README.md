@@ -20,7 +20,7 @@
 
 ## 💡 The Core Problem: Why Traditional LLM Browser Drivers Are Broken
 
-Modern AI browser drivers (Stagehand, Browserbase, Browser-Use, MultiOn) rely almost exclusively on Large Language Models (LLMs) or Vision Models (GPT-4o, Claude 3.5 Sonnet) for **every single interaction**:
+Modern AI browser drivers (Stagehand, Browserbase, Browser-Use, MultiOn) rely almost exclusively on Large Language Models (LLMs) or Vision Models (GPT 5.6 Terra, Claude 4.5 Sonnet, Gemini 3 Flash) for **every single interaction**:
 
 1. **Massive Token Waste:** Each step serializes 15,000 to 50,000 tokens of raw DOM trees or high-resolution screenshot images. A simple 10-step form submission consumes **200,000+ tokens** ($0.50 – $2.00 per single run).
 2. **Crippling Latency:** Autoregressive LLMs take **3 to 8 seconds** to generate tokens for trivial decisions like *"which button is Submit?"*.
@@ -28,7 +28,7 @@ Modern AI browser drivers (Stagehand, Browserbase, Browser-Use, MultiOn) rely al
 
 ### 💰 Cost & Speed Comparison: Traditional LLM vs. JevBrow
 
-| Metric | Traditional LLM Driver (GPT-4o / Claude) | JevBrow (Jev System One + Fallback) | Improvement |
+| Metric | Traditional LLM Driver (GPT 5.6 / Claude) | JevBrow (Jev System One + Fallback) | Improvement |
 |---|---|---|---|
 | **Latency per Action** | 3,000 ms – 7,000 ms | **80 ms – 150 ms** | **~30x Faster** ⚡ |
 | **Tokens per Step** | 15,000 – 40,000 tokens | **0 LLM tokens** (95% of routine actions) | **98%+ Reduction** |
@@ -88,7 +88,7 @@ Jev is **not a slow autoregressive LLM**. It is a System One model engineered sp
 The LLM only activates when genuinely required:
 - Creative text generation for open-ended form fields
 - Page summarization and structured data extraction (`aiSummarize`, `aiExtract`)
-- Visual reasoning over screenshots when a vision model (e.g. GPT-4o) is configured
+- Visual reasoning over screenshots when a vision model (e.g. GPT 5.6 Luna / Sol or DeepSeek V4.1) is configured
 - Ambiguous edge-cases where Jev confidence is below threshold
 
 ---
@@ -285,7 +285,7 @@ const tools = page.getToolDefinitions();
 
 // 2. Pass tools to your LLM orchestrator:
 const response = await openai.chat.completions.create({
-  model: 'gpt-4o',
+  model: 'gpt-5.6-luna',
   messages: [{ role: 'user', content: 'Go to github.com and search for jevbrow' }],
   tools: tools.map(t => ({ type: 'function', function: t })),
 });
@@ -317,7 +317,7 @@ const browser = new JevBrow({
   // OpenAI-Compatible LLM (Optional fallback)
   llm: {
     apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4o-mini', // Default: 'gpt-4o-mini' or 'gpt-5-nano'
+    model: 'gpt-5.6-luna', // e.g. 'gpt-5.6-luna', 'gpt-5.6-terra', or 'gpt-5.6-sol'
     baseUrl: 'https://openrouter.ai/api/v1', // Any custom endpoint
     useHttp: true, // Force native fetch, zero OpenAI SDK required
     isVisionCapable: true, // Enable if using multimodal vision models
@@ -358,7 +358,7 @@ JevBrow works seamlessly with any OpenAI-compatible provider:
 const browser = new JevBrow({
   llm: {
     baseUrl: 'http://localhost:11434/v1',
-    model: 'llama3.2-vision',
+    model: 'llama-4-scion',
   },
 });
 
@@ -367,7 +367,7 @@ const browser = new JevBrow({
   llm: {
     apiKey: process.env.GROQ_API_KEY,
     baseUrl: 'https://api.groq.com/openai/v1',
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama-4-70b-fast',
   },
 });
 
@@ -376,7 +376,7 @@ const browser = new JevBrow({
   llm: {
     apiKey: process.env.DEEPSEEK_API_KEY,
     baseUrl: 'https://api.deepseek.com/v1',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4.1-flash',
   },
 });
 ```

@@ -24,7 +24,7 @@ async function runLiveTest() {
   // 1. Verify Environment Variables
   const jevKey = process.env.TYPESAFE_API_KEY || '';
   const openaiKey = process.env.OPENAI_API_KEY || '';
-  const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const openaiModel = process.env.OPENAI_MODEL || 'gpt-5.6-luna';
 
   console.log('1. Checking Environment:');
   console.log(`   - TYPESAFE_API_KEY: ${jevKey ? '✓ Present (' + jevKey.slice(0, 12) + '...)' : '✗ Missing'}`);
