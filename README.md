@@ -20,7 +20,7 @@
 
 ## 💡 The Core Problem: Why Traditional LLM Browser Drivers Are Broken
 
-Modern AI browser drivers (Stagehand, Browserbase, Browser-Use, MultiOn) rely almost exclusively on Large Language Models (LLMs) or Vision Models (GPT 5.6 Terra, Claude 4.5 Sonnet, Gemini 3 Flash) for **every single interaction**:
+Modern AI browser drivers (Stagehand, Browserbase, Browser-Use, MultiOn) rely almost exclusively on Large Language Models (LLMs) or Vision Models (GPT 5.6 Terra, Claude 5 Sonnet, Gemini 3 Flash) for **every single interaction**:
 
 1. **Massive Token Waste:** Each step serializes 15,000 to 50,000 tokens of raw DOM trees or high-resolution screenshot images. A simple 10-step form submission consumes **200,000+ tokens** ($0.50 – $2.00 per single run).
 2. **Crippling Latency:** Autoregressive LLMs take **3 to 8 seconds** to generate tokens for trivial decisions like *"which button is Submit?"*.
@@ -28,7 +28,7 @@ Modern AI browser drivers (Stagehand, Browserbase, Browser-Use, MultiOn) rely al
 
 ### 💰 Cost & Speed Comparison: Traditional LLM vs. JevBrow
 
-| Metric | Traditional LLM Driver (GPT 5.6 / Claude) | JevBrow (Jev System One + Fallback) | Improvement |
+| Metric | Traditional LLM Driver (GPT 5.6 Terra / Claude 5 Sonnet) | JevBrow (Jev System One + Fallback) | Improvement |
 |---|---|---|---|
 | **Latency per Action** | 3,000 ms – 7,000 ms | **80 ms – 150 ms** | **~30x Faster** ⚡ |
 | **Tokens per Step** | 15,000 – 40,000 tokens | **0 LLM tokens** (95% of routine actions) | **98%+ Reduction** |
@@ -88,7 +88,7 @@ Jev is **not a slow autoregressive LLM**. It is a System One model engineered sp
 The LLM only activates when genuinely required:
 - Creative text generation for open-ended form fields
 - Page summarization and structured data extraction (`aiSummarize`, `aiExtract`)
-- Visual reasoning over screenshots when a vision model (e.g. GPT 5.6 Luna / Sol or DeepSeek V4.1) is configured
+- Visual reasoning over screenshots when a vision model (e.g. GPT 5.6 Luna / Sol, Claude 5 Sonnet, or DeepSeek V4.1 Flash) is configured
 - Ambiguous edge-cases where Jev confidence is below threshold
 
 ---
@@ -317,7 +317,7 @@ const browser = new JevBrow({
   // OpenAI-Compatible LLM (Optional fallback)
   llm: {
     apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-5.6-luna', // e.g. 'gpt-5.6-luna', 'gpt-5.6-terra', or 'gpt-5.6-sol'
+    model: 'gpt-5.6-luna', // e.g. 'gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol', or 'claude-5-sonnet'
     baseUrl: 'https://openrouter.ai/api/v1', // Any custom endpoint
     useHttp: true, // Force native fetch, zero OpenAI SDK required
     isVisionCapable: true, // Enable if using multimodal vision models
@@ -349,16 +349,26 @@ const browser = new JevBrow({
 
 ---
 
-### Custom LLM Providers (Ollama, DeepSeek, Groq, OpenRouter)
+### Custom LLM Providers (Claude, DeepSeek, Ollama, Groq, OpenRouter)
 
 JevBrow works seamlessly with any OpenAI-compatible provider:
 
 ```typescript
-// 🦙 Ollama (Local LLM)
+// 🎭 Claude 5 Sonnet (via OpenRouter or OpenAI-compatible proxy)
 const browser = new JevBrow({
   llm: {
-    baseUrl: 'http://localhost:11434/v1',
-    model: 'llama-4-scion',
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'anthropic/claude-5-sonnet',
+  },
+});
+
+// 🐋 DeepSeek V4.1 Flash
+const browser = new JevBrow({
+  llm: {
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-v4.1-flash',
   },
 });
 
@@ -371,12 +381,11 @@ const browser = new JevBrow({
   },
 });
 
-// 🐋 DeepSeek
+// 🦙 Ollama (Local LLM)
 const browser = new JevBrow({
   llm: {
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseUrl: 'https://api.deepseek.com/v1',
-    model: 'deepseek-v4.1-flash',
+    baseUrl: 'http://localhost:11434/v1',
+    model: 'llama-4-scion',
   },
 });
 ```
