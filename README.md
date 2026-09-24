@@ -377,7 +377,7 @@ const browser = new JevBrow({
   llm: {
     apiKey: process.env.GROQ_API_KEY,
     baseUrl: 'https://api.groq.com/openai/v1',
-    model: 'llama-4-70b-fast',
+    model: 'llama-3.3-70b-versatile',
   },
 });
 
@@ -385,7 +385,7 @@ const browser = new JevBrow({
 const browser = new JevBrow({
   llm: {
     baseUrl: 'http://localhost:11434/v1',
-    model: 'llama-4-scion',
+    model: 'llama3.3',
   },
 });
 ```
